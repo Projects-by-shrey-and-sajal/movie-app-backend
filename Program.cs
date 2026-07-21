@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using MovieBooking.API.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -6,6 +9,26 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Configure EF Core DbContext (MySQL - Pomelo)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("DefaultConnection must be configured in appsettings or environment variables.");
+}
+
+var databasePassword = builder.Configuration["Database:Password"] ?? Environment.GetEnvironmentVariable("DB_PASSWORD");
+if (!string.IsNullOrWhiteSpace(databasePassword) && !connectionString.Contains("Password=", StringComparison.OrdinalIgnoreCase))
+{
+    if (!connectionString.TrimEnd().EndsWith(";"))
+    {
+        connectionString += ";";
+    }
+    connectionString += $"Password={databasePassword};";
+}
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
